@@ -15,11 +15,12 @@ class CTraitement
 {
 public:
 	CTraitement(void);
+	Mat ConvertToGray(Mat Image);
 	void DrawLine(Mat image,Point p1,Point p2,Scalar color);
-	void FindMiddleCircle(Mat image);
+	void DrawCross(Mat image, uchar seuil);
 	void DrawHistogramme(Mat image, Mat imageSeuil,int SeuilX, int SeuilY);
 	Mat Sobel(Mat Image);
-	void FindRectangleAngle(Mat Image);
+	void FindRectangleAngle(Mat Image, uchar seuil);
 	~CTraitement(void);
 };
 

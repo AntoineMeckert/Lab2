@@ -15,23 +15,33 @@ CTraitement::CTraitement(void)
 
 }
 
+Mat CTraitement::ConvertToGray(Mat Image)
+{
+	Mat Gray;
+	cvtColor(Image,Gray,CV_BGR2GRAY);
+	return Gray;
+}
+
 void CTraitement::DrawLine(Mat image,Point p1,Point p2,Scalar color)
 {
 	line(image, p1, p2,color, 1, 8, 0);
 }
 
-void CTraitement::FindMiddleCircle(Mat image)
+void CTraitement::DrawCross(Mat image,uchar seuil)
 {
 	int xDroite = 0;
 	int xGauche = 1000;
 	int yHaut = 1000;
 	int yBas = 0;
 
+	Mat imageGris;
+	cvtColor(image,imageGris,CV_BGR2GRAY);
+
 	for( int y = 0; y < image.rows; y++ ) 
 	{
 		for( int x = 0; x < image.cols; x++ ) 
 		{
-			if ( image.at<Vec3b>(y,x) == cv::Vec3b(0,0,0) ) 
+			if ( imageGris.at<uchar>(y,x) < seuil ) 
 			{
 				if(x > xDroite)
 					xDroite = x;
@@ -54,16 +64,10 @@ void CTraitement::FindMiddleCircle(Mat image)
 
 void CTraitement::DrawHistogramme(Mat image, Mat imageSeuil,int SeuilX, int SeuilY)
 {
-	DrawLine(imageSeuil,Point(0,imageSeuil.rows - SeuilX),Point(imageSeuil.cols,imageSeuil.rows - SeuilX),Scalar(0,0,0));
 	string x;
-
 	ostringstream posX1s;
-
 	posX1s << SeuilX;
-
 	x = posX1s.str();
-	
-	putText(imageSeuil,x,Point(0,imageSeuil.rows - SeuilX),FONT_HERSHEY_COMPLEX_SMALL,0.8, Scalar(0,255,0), 1, 8, false );
 	string y2;
 
 
@@ -77,14 +81,27 @@ void CTraitement::DrawHistogramme(Mat image, Mat imageSeuil,int SeuilX, int Seui
 		uchar Color = grayHisto.at<uchar>(Point(lastx,SeuilY));
 		imageSeuil.rows;
 		uchar PosY = imageSeuil.rows - Color;
-
-
-
-
 		DrawLine(imageSeuil,Point(lastx,lasty),Point(x,PosY),Scalar(0,0,0));
 		lastx = x;
 		lasty = PosY;
 	}
+
+	int min = 255;
+	int max = 0;
+
+	for(int x = 0; x < grayHisto.cols;x++)
+	{
+		uchar Color = grayHisto.at<uchar>(Point(x,SeuilY));
+		if(Color > max) max = Color;
+		if(Color < min) min = Color;
+	}
+
+	ostringstream strin;
+	strin << (min + max) /2;
+	string text = strin.str();
+
+	DrawLine(imageSeuil,Point(0,imageSeuil.rows - (max + min)/2),Point(imageSeuil.cols,imageSeuil.rows - (max + min)/2),Scalar(0,0,0));
+	putText(imageSeuil,text,Point(0,imageSeuil.rows - (max + min)/2),FONT_HERSHEY_COMPLEX_SMALL,0.8, Scalar(0,255,0), 1, 8, false );
 }
 
 Mat CTraitement::Sobel(Mat Image)
@@ -122,18 +139,22 @@ Mat CTraitement::Sobel(Mat Image)
 	return Result;
 }
 
-void CTraitement::FindRectangleAngle(Mat Image)
+void CTraitement::FindRectangleAngle(Mat Image, uchar seuil)
 {
 	int xDroite = 0;
 	int xGauche = 1000;
 	int yHaut = 1000;
 	int yBas = 0;
 
+	Mat imageGris;
+	cvtColor(Image,imageGris,CV_BGR2GRAY);
+
 	for( int y = 0; y < Image.rows; y++ ) 
 	{
 		for( int x = 0; x < Image.cols; x++ ) 
 		{
-			if ( Image.at<Vec3b>(y,x) != cv::Vec3b(255,255,255) ) 
+
+			if(imageGris.at<uchar>(y,x) < seuil) 
 			{
 				if(x > xDroite)
 					xDroite = x;
@@ -158,13 +179,14 @@ void CTraitement::FindRectangleAngle(Mat Image)
 	//Trouver le coin a droite et a gauche
 	for(int i = 0; i< Image.rows;i++)
 	{
-		if ( Image.at<Vec3b>(Point(xDroite,i)) != cv::Vec3b(255,255,255) )
+		uchar color = imageGris.at<uchar>(Point(xDroite,i));
+		if (color < seuil)
 		{
 			line(Image,Point(xDroite - 10,i),Point(xDroite + 10,i),Scalar(255,255,255),1,8,0);
 			line(Image,Point(xDroite,i - 10),Point(xDroite,i + 10),Scalar(255,255,255),1,8,0);
 		}
 
-		if ( Image.at<Vec3b>(Point(xGauche,i)) != cv::Vec3b(255,255,255) )
+		if (imageGris.at<uchar>(Point(xGauche,i)) < seuil)
 		{
 			line(Image,Point(xGauche - 10,i),Point(xGauche + 10,i),Scalar(255,255,255),1,8,0);
 			line(Image,Point(xGauche,i - 10),Point(xGauche,i + 10),Scalar(255,255,255),1,8,0);
@@ -177,7 +199,7 @@ void CTraitement::FindRectangleAngle(Mat Image)
 	//Trouver le coin en bas et en haut
 	for(int i = 0; i< Image.cols;i++)
 	{
-		if ( Image.at<Vec3b>(Point(i,yHaut)) != cv::Vec3b(255,255,255) )
+		if (imageGris.at<uchar>(Point(i,yHaut)) < seuil)
 		{
 			line(Image,Point(i - 10,yHaut),Point(i + 10,yHaut),Scalar(255,255,255),1,8,0);
 			line(Image,Point(i,yHaut - 10),Point(i,yHaut + 10),Scalar(255,255,255),1,8,0);
@@ -185,7 +207,7 @@ void CTraitement::FindRectangleAngle(Mat Image)
 			Haut.y = i;
 		}
 
-		if ( Image.at<Vec3b>(Point(i,yBas)) != cv::Vec3b(255,255,255) )
+		if (imageGris.at<uchar>(Point(i,yBas)) < seuil)
 		{
 			line(Image,Point(i - 10,yBas),Point(i + 10,yBas),Scalar(255,255,255),1,8,0);
 			line(Image,Point(i,yBas - 10),Point(i,yBas + 10),Scalar(255,255,255),1,8,0);
